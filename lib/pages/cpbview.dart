@@ -2,11 +2,14 @@ import 'package:ctps_app/pages/homeScreen.dart';
 import 'package:ctps_app/pdf/permitDownload.dart';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:path_provider/path_provider.dart';
 import 'package:htmltopdfwidgets/htmltopdfwidgets.dart' as pdfw;
 import 'package:pdf/widgets.dart' as pw;
+import 'package:flutter/foundation.dart';
+
 // import 'package:pdf/pdf.dart';
 
 // import '../components/clientSelectDropdDown.dart';
@@ -1453,20 +1456,28 @@ Solitaire Press #5076</span>
                     children: [
                       ElevatedButton(
                           style: style,
-                          onPressed: () async {
-                            convert(cfData, "Cross Border Permit");
-                            var targetPath2 =
-                                await _localPath; //  file store path is required for open the file and send to the next screen
 
+                          onPressed: () async {
+                            showDialog(
+                              context: context,
+                              barrierDismissible: false,
+                              builder: (context) => const Center(child: CircularProgressIndicator()),
+                            );
+
+                            await convert(cfData, "Cross Border Permit"); // heavy work
+
+                            Navigator.pop(context); // close loading dialog
+
+                            var targetPath2 = await _localPath; //  file store path is required for open the file and send to the next screen
                             Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => CertificateDownload(
-                                    certificateData: "File Name",
-                                    certificatePath: targetPath2
-                                        .toString(), // File name is that name that was open in next screen
-                                  ),
-                                ));
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => CertificateDownload(
+                                  certificateData: "File Name",
+                                  certificatePath: targetPath2.toString(),
+                                ),
+                              ),
+                            );
                           },
                           child: Text('Generate PDF')),
                     ],
@@ -1481,7 +1492,11 @@ Solitaire Press #5076</span>
   }
 
   Future<void> convert(String htmlContent, String name) async {
+    final font = await rootBundle.load("assets/fonts/Roboto-Regular.ttf");
+    final ttf = pw.Font.ttf(font);
+
     final pdf = pw.Document(); // pw = pdf widgets (import below)
+
 
     // Convert HTML to widgets
     final htmlToPdf = pdfw.HTMLToPdf();
@@ -1491,6 +1506,16 @@ Solitaire Press #5076</span>
     pdf.addPage(pw.MultiPage(
       build: (context) => widgets,
     ));
+
+    pdf.addPage(
+      pw.MultiPage(
+        theme: pw.ThemeData.withFont(
+          base: ttf,
+        ),
+        build: (context) => widgets,
+      ),
+    );
+
 
     // Save to file
     final outputDir = await _localPath; // Assuming you already have this
